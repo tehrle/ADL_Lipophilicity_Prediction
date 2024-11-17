@@ -1,0 +1,6 @@
+rdkit
+dgllife
+torch-geometric
+pandas
+matplotlib
+networkx

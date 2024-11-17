@@ -1,0 +1,7 @@
+# MacOS Stuff
+.DS_Store
+
+# PyCharm Stuff
+.idea
+
+scratch_space/

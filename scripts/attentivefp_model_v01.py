@@ -111,9 +111,6 @@ torch.save(model, '../deep_learning_outputs/trained_models/attentiveFP_v01.pt')
 
 logging.info('Successfully saved trained model')
 
-print(len(metrics['train_loss']))
-
-
 # plot trainings history
 plot_history(
     train_history=metrics['train_loss'],

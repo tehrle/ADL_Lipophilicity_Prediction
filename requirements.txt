@@ -4,3 +4,6 @@ torch-geometric
 pandas
 matplotlib
 networkx
+numpy
+tqdm
+pysmilesutils

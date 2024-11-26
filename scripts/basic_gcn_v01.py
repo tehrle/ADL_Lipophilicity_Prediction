@@ -122,10 +122,10 @@ class SimpleGCN(nn.Module):
 
 # Init model
 model = SimpleGCN(
-    in_channels=74,
+    in_channels=9,
     hidden_channels=128,
     out_channels=1,
-    edge_dim=12
+    edge_dim=3
 )
 
 #=======================================================================================================================
@@ -146,7 +146,7 @@ metrics = train_graph_model(
     model=model,
     num_epochs=num_epochs,
     optimizer=optimizer,
-    loss_fn=nn.MSELoss(),
+    loss_fn=nn.L1Loss(),
     train_loader=train_loader,
     val_loader=val_loader,
     device=device

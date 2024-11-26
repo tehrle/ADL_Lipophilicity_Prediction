@@ -14,7 +14,7 @@ dependencies:
   - mkl==2024.0
   - pip=22.3.1
   - pip:
-    - numpy
+    - numpy<2.0
     - pandas
     - matplotlib
     - scikit-learn

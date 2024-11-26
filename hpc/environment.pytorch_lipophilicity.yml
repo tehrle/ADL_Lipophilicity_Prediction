@@ -19,6 +19,4 @@ dependencies:
     - matplotlib
     - scikit-learn
     - rdkit
-    - dgl
-    - dgllife
     - networkx

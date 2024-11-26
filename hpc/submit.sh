@@ -26,8 +26,16 @@ echo
 echo "#########################################   PyTorch Info"
 echo
 
-python pytorch_info.py
+python /cfs/earth/scratch/ehrletim/ADL_Lipophilicity_Prediction/scripts/pytorch_info_cuda.py
+
+echo
+echo "#########################################   Generating Data for DL"
+echo
+
+python /cfs/earth/scratch/ehrletim/ADL_Lipophilicity_Prediction/scripts/smiles_preprocessing.py
 
 echo
 echo "#########################################   DL part"
 echo
+
+python /cfs/earth/scratch/ehrletim/ADL_Lipophilicity_Prediction/scripts/attentivefp_model_v01.py

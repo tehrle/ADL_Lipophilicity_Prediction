@@ -66,10 +66,10 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 logging.info(f'The following device is used for model training: {device}')
 
 model = AttentiveFP(
-    in_channels=74,
+    in_channels=9,
     hidden_channels=128,
     out_channels=1,
-    edge_dim=12,
+    edge_dim=3,
     num_layers=4,
     num_timesteps=4,
     dropout=0.2

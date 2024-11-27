@@ -71,17 +71,18 @@ class SimpleGCN(nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels, edge_dim):
         super(SimpleGCN, self).__init__()
 
-        # Linear transformation of input, for skip connections
-        self.input_proj = nn.Linear(in_channels, hidden_channels)
+        # Embeddings for Nodes and Edges
+        self.node_embeddings = nn.Linear(in_features=in_channels, out_features=hidden_channels)
+        self.edge_embeddings = nn.Linear(in_features=edge_dim, out_features=hidden_channels)
 
         # NNConv-Layers
-        self.edge_nn1 = Linear(in_features=edge_dim, out_features=hidden_channels * in_channels)
-        self.conv1 = NNConv(in_channels=in_channels, out_channels=hidden_channels, nn=self.edge_nn1, aggr='add')
+        self.edge_nn1 = Linear(in_features=hidden_channels, out_features=hidden_channels * hidden_channels)
+        self.conv1 = NNConv(in_channels=hidden_channels, out_channels=hidden_channels, nn=self.edge_nn1, aggr='add')
 
-        self.edge_nn2 = Linear(in_features=edge_dim, out_features=hidden_channels * hidden_channels)
+        self.edge_nn2 = Linear(in_features=hidden_channels, out_features=hidden_channels * hidden_channels)
         self.conv2 = NNConv(in_channels=hidden_channels, out_channels=hidden_channels, nn=self.edge_nn2, aggr='add')
 
-        self.edge_nn3 = Linear(in_features=edge_dim, out_features=hidden_channels * hidden_channels)
+        self.edge_nn3 = Linear(in_features=hidden_channels, out_features=hidden_channels * hidden_channels)
         self.conv3 = NNConv(in_channels=hidden_channels, out_channels=hidden_channels, nn=self.edge_nn3, aggr='add')
 
         # Global add pooling
@@ -96,12 +97,14 @@ class SimpleGCN(nn.Module):
 
     def forward(self, x, edge_index, edge_attr, batch):
 
-        # Linear projection of node features
-        x_proj = self.input_proj(x)     # Shape: (N, hidden_channels)
+        # Node and Edge Embeddings
+        x = F.relu(self.node_embeddings(x))
+        edge_attr = F.relu(self.edge_embeddings(edge_attr))
+
 
         # NNConv-Layers with skip connections
         x1 = F.relu(self.conv1(x, edge_index, edge_attr))
-        x1_skip = x1 + x_proj                  # Shape: (N, hidden_channels)
+        x1_skip = x1 + x
 
         x2 = F.relu(self.conv2(x1_skip, edge_index, edge_attr))
         x2_skip = x2 + x1_skip

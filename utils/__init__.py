@@ -4,11 +4,14 @@ __author__ = 'Timo Ehrle'
 from .pytorch_model_training import (
     train_graph_model,
     validate_graph_model,
-    predict_graph_model
+    predict_graph_model,
+    train_STP_model,
+    evaluate_STP_model
 )
 
 from .pytorch_data_handling import (
-    split_dataset
+    split_dataset,
+    split_SMILE_Dataset
 )
 
 from .pytorch_loss_metrics import (
@@ -21,5 +24,11 @@ from .plotting import (
 )
 
 from .smiles_processing import (
-    SMILESConverter
+    SMILESConverter,  
+    SMILESDataset,
+    SMILESAugmentation
+)
+
+from .pytorch_custom_layers import (
+    TransformerBlock
 )

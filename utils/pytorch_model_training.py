@@ -164,4 +164,36 @@ def train_graph_model(model, num_epochs, optimizer, loss_fn, train_loader, val_l
     return metrics
 
 #=======================================================================================================================
+#  For transformer model
+#
 
+def train_STP_model(model, dataloader, optimizer, criterion, device):
+
+    model.train()
+    total_loss = 0
+    for inputs, targets in tqdm(dataloader, desc="Training", leave=False):
+        inputs, targets = inputs.to(device), targets.to(device)
+        optimizer.zero_grad()
+        outputs = model(inputs)
+        loss = criterion(outputs, targets.unsqueeze(1))
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item()
+    return total_loss / len(dataloader)
+
+def evaluate_STP_model(model, dataloader, criterion, device):
+    model.eval()
+    total_loss = 0
+    predictions = []
+    targets_list = []
+    with torch.no_grad():
+        for inputs, targets in tqdm(dataloader, desc="Evaluating", leave=False):
+            inputs, targets = inputs.to(device), targets.to(device)
+            outputs = model(inputs)
+            loss = criterion(outputs, targets.unsqueeze(1))
+            total_loss += loss.item()
+            predictions.extend(outputs.cpu().numpy())
+            targets_list.extend(targets.cpu().numpy())
+    return total_loss / len(dataloader), predictions, targets_list
+
+#=======================================================================================================================

@@ -7,6 +7,10 @@ from rdkit.Chem.Crippen import MolLogP
 from dgllife.utils import mol_to_bigraph, CanonicalAtomFeaturizer, CanonicalBondFeaturizer
 from torch_geometric.data import Data
 import torch
+from torch.utils.data import Dataset
+
+
+from pysmilesutils.augment import SMILESAugmenter
 
 # TODO: Add Docstrings for class
 
@@ -122,3 +126,117 @@ class SMILESConverter:
 
     def get_graph(self):
         return self.graph
+    
+    
+
+    
+
+class SMILESDataset(Dataset):
+    def __init__(self, smiles, targets, tokenizer, max_length=180):
+        """
+        Initializes the SMILES processing class.
+        Args:
+            smiles (list): The list of SMILES strings.
+            targets (list): The list of target values associated with the SMILES string.
+            tokenizer (object): The tokenizer object used to tokenize the SMILES string.
+        """
+        self.smiles = smiles
+        self.targets = targets
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+
+    def __len__(self):
+        return len(self.smiles)
+    
+    def __getitem__(self, idx):
+        """
+        Returns the SMILES string and the target value at the given index.
+        Args:
+            idx (int): The index of the SMILES string and target value.
+        Returns:
+            tuple: The SMILES string and the target value.
+        """
+        smiles = self.smiles[idx]
+        target = self.targets[idx]
+        encoded_smiles = self.tokenizer.encode(smiles)[0]
+        # pad the encoded_smiles tensor to max_length
+        if len(encoded_smiles) < self.max_length:
+            pad_length = self.max_length - len(encoded_smiles)
+            encoded_smiles = torch.cat([encoded_smiles, torch.zeros(pad_length, dtype=torch.long)])
+        else:
+            encoded_smiles = encoded_smiles[:self.max_length]
+        target = torch.tensor(target, dtype=torch.float)
+        return encoded_smiles, target
+    
+    def get_smiles(self):
+        return self.smiles
+    
+    def get_targets(self):
+        return self.targets
+    
+    def get_tokenizer(self):
+        return self.tokenizer
+        
+
+
+
+    
+class SMILESAugmentation:
+    def __init__(self, train_dataset, tokenizer):
+        """
+        Initializes the SMILES processing class with a training dataset and a tokenizer.
+        Args:
+            train_dataset (Dataset): The dataset containing SMILES strings and their corresponding targets.
+            tokenizer (Tokenizer): The tokenizer used to decode SMILES strings.
+        Attributes:
+            train_dataset (Dataset): Stores the provided training dataset.
+            tokenizer (Tokenizer): Stores the provided tokenizer.
+        Iterates over the training dataset, decodes each SMILES string using the tokenizer, and processes the data.
+        """
+        self.train_dataset = train_dataset
+        self.tokenizer = tokenizer
+
+        # check if train_dataset is an instance of SMILESDataset or a subset of pytorch Dataset
+        if isinstance(train_dataset, SMILESDataset):
+            self.smiles = train_dataset.get_smiles()
+            self.targets = train_dataset.get_targets()
+            
+        elif isinstance(train_dataset, torch.utils.data.Subset):
+            self.smiles = []
+            self.targets = []
+            for i in train_dataset:
+                self.smiles.append(self.tokenizer.decode(i[0]))
+                self.targets.append(i[1])
+            
+
+        
+        
+    
+    def augment(self, num_samples):
+        augmenter = SMILESAugmenter()
+        augmented_smiles = []
+        augmented_targets = []
+
+        
+        
+        for smiles, target in zip(self.smiles, self.targets):
+            augmented_smiles.append(smiles)
+            augmented_targets.append(target)
+            
+            
+            new_smiles = augmenter([smiles]*num_samples)
+            for i in range(num_samples):
+                augmented_smiles.append(new_smiles[i])
+                augmented_targets.append(target)
+
+        # shuffle the augmented data
+        indices = len(augmented_smiles)
+        indices = torch.randperm(indices)
+        augmented_smiles = [augmented_smiles[i] for i in indices]
+        augmented_targets = [augmented_targets[i] for i in indices]        
+
+
+        return augmented_smiles, augmented_targets
+
+        
+        

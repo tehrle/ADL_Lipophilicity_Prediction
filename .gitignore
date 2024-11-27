@@ -4,4 +4,8 @@
 # PyCharm Stuff
 .idea
 
+# Python Stuff
+__pycache__/
+.pyc
+
 scratch_space/

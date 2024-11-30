@@ -9,7 +9,7 @@ from tqdm import tqdm
 #   For graph neural network!
 #
 
-def predict_graph_model(model, test_loader, device):
+def predict_graph_model(model, test_loader, device, use_edge_attr=True):
     # Init list for predictions / labels
     test_targets = []
     test_predictions = []
@@ -24,7 +24,11 @@ def predict_graph_model(model, test_loader, device):
             data = data.to(device)
 
             # Make predictions
-            test_output = model(data.x, data.edge_index, data.edge_attr, data.batch)
+            if use_edge_attr:
+                test_output = model(data.x, data.edge_index, data.edge_attr, data.batch)
+
+            else:
+                test_output = model(data.x, data.edge_index, None, data.batch)
 
             # Store predictions and targets
             test_targets.append(data.y.detach().cpu())
@@ -36,7 +40,7 @@ def predict_graph_model(model, test_loader, device):
 
     return y_pred_tensor, y_test_tensor
 
-def validate_graph_model(model, val_loader, loss_fn, device, mae_loss, mse_loss, rmse_loss):
+def validate_graph_model(model, val_loader, loss_fn, device, mae_loss, mse_loss, rmse_loss, use_edge_attr=True):
     # Initialize validation val_metrics
     val_metrics = {
         'loss': [],
@@ -55,7 +59,12 @@ def validate_graph_model(model, val_loader, loss_fn, device, mae_loss, mse_loss,
             data = data.to(device)
 
             # Forward pass
-            output = model(data.x, data.edge_index, data.edge_attr, data.batch)
+            if use_edge_attr:
+                output = model(data.x, data.edge_index, data.edge_attr, data.batch)
+
+            else:
+                output = model(data.x, data.edge_index, None, data.batch)
+
             target = data.y
 
             # Calculate val_metrics
@@ -74,7 +83,7 @@ def validate_graph_model(model, val_loader, loss_fn, device, mae_loss, mse_loss,
 
 
 
-def train_graph_model(model, num_epochs, optimizer, loss_fn, train_loader, val_loader, device):
+def train_graph_model(model, num_epochs, optimizer, loss_fn, train_loader, val_loader, device, use_edge_attr=True):
     # Tracked Metrics
     metrics = {
         'epoch': np.arange(1, num_epochs + 1),
@@ -106,7 +115,7 @@ def train_graph_model(model, num_epochs, optimizer, loss_fn, train_loader, val_l
         }
 
         # Progress bar
-        train_bar = tqdm(train_loader, desc=f'Epoch {epoch + 1}/{num_epochs}', leave=True, colour='white')
+        train_bar = tqdm(train_loader, desc=f'Epoch {epoch + 1}/{num_epochs}', leave=True, colour='red')
 
         for data in train_bar:
             # Move data to device
@@ -116,7 +125,12 @@ def train_graph_model(model, num_epochs, optimizer, loss_fn, train_loader, val_l
             optimizer.zero_grad()
 
             # Forward pass
-            output = model(data.x, data.edge_index, data.edge_attr, data.batch)
+            if use_edge_attr:
+                output = model(data.x, data.edge_index, data.edge_attr, data.batch)
+
+            else:
+                output = model(data.x, data.edge_index, None, data.batch)
+
             target = data.y  # Extract labels
 
             # Calculate loss
@@ -152,7 +166,8 @@ def train_graph_model(model, num_epochs, optimizer, loss_fn, train_loader, val_l
             mae_loss=mae_loss,
             mse_loss=mse_loss,
             rmse_loss=rmse_loss,
-            device=device
+            device=device,
+            use_edge_attr=use_edge_attr
         )
 
         # Store metrics for validation

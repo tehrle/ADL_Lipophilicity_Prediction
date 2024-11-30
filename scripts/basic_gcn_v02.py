@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import Linear
-from torch_geometric.nn import GCNConv, global_add_pool, summary
+from torch_geometric.nn import NNConv, global_add_pool, summary
 from torch_geometric.loader import DataLoader
 from torch.optim import Adam
 import os
@@ -72,16 +72,21 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 logging.info(f'The following device is used for model training: {device}')
 
 class SimpleGCN(nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels):
+    def __init__(self, in_channels, hidden_channels, out_channels, edge_dim):
         super(SimpleGCN, self).__init__()
 
         # Node Embeddings
         self.node_embeddings = nn.Linear(in_features=in_channels, out_features=hidden_channels)
 
         # NNConv-Layers
-        self.conv1 = GCNConv(in_channels=hidden_channels, out_channels=hidden_channels)
-        self.conv2 = GCNConv(in_channels=hidden_channels, out_channels=hidden_channels)
-        self.conv3 = GCNConv(in_channels=hidden_channels, out_channels=hidden_channels)
+        self.edge_nn1 = Linear(in_features=edge_dim, out_features=hidden_channels * hidden_channels)
+        self.conv1 = NNConv(in_channels=hidden_channels, out_channels=hidden_channels, nn=self.edge_nn1, aggr='add')
+
+        self.edge_nn2 = Linear(in_features=edge_dim, out_features=hidden_channels * hidden_channels)
+        self.conv2 = NNConv(in_channels=hidden_channels, out_channels=hidden_channels, nn=self.edge_nn2, aggr='add')
+
+        self.edge_nn3 = Linear(in_features=edge_dim, out_features=hidden_channels * hidden_channels)
+        self.conv3 = NNConv(in_channels=hidden_channels, out_channels=hidden_channels, nn=self.edge_nn3, aggr='add')
 
         # Global add pooling
         self.global_pool = global_add_pool
@@ -95,9 +100,9 @@ class SimpleGCN(nn.Module):
         x = F.relu(self.node_embeddings(x))
 
         # NNConv-Layers with skip connections
-        x = F.relu(self.conv1(x, edge_index))
-        x = F.relu(self.conv2(x, edge_index))
-        x = F.relu(self.conv3(x, edge_index))
+        x = F.relu(self.conv1(x, edge_index, edge_attr))
+        x = F.relu(self.conv2(x, edge_index, edge_attr))
+        x = F.relu(self.conv3(x, edge_index, edge_attr))
 
         # Global add pooling
         x_pooled = self.global_pool(x, batch)
@@ -111,7 +116,8 @@ class SimpleGCN(nn.Module):
 model = SimpleGCN(
     in_channels=9,
     hidden_channels=128,
-    out_channels=1
+    out_channels=1,
+    edge_dim=3
 )
 
 # Print Model Summary
@@ -149,13 +155,13 @@ metrics = train_graph_model(
     train_loader=train_loader,
     val_loader=val_loader,
     device=device,
-    use_edge_attr=False
+    use_edge_attr=True
 )
 
 logging.info(f'Finished: Trained model for {num_epochs} epochs')
 
 # save trained model
-torch.save(model, '../deep_learning_outputs/trained_models/basic_gcn_v01.pt')
+torch.save(model, '../deep_learning_outputs/trained_models/basic_gcn_v02.pt')
 
 logging.info('Successfully saved trained model')
 
@@ -166,7 +172,7 @@ plot_history(
     train_label='Train MSE (Loss) / -',
     val_label='Val MSE (Loss) / -',
     figsize=(16, 8),
-    file='../deep_learning_outputs/figures/train_history_basic_gcn_v01.png'
+    file='../deep_learning_outputs/figures/train_history_basic_gcn_v02.png'
 )
 
 # save train/val_losses as csv
@@ -174,7 +180,7 @@ training_lod_df = pd.DataFrame(metrics)
 
 # save trainings log
 training_lod_df.to_csv(
-    '../deep_learning_outputs/training_logs/train_history_basic_gcn_v01.csv',
+    '../deep_learning_outputs/training_logs/train_history_basic_gcn_v02.csv',
     index=False,
     header=True
 )
@@ -194,7 +200,7 @@ y_pred_tensor, y_test_tensor = predict_graph_model(
     model=model,
     test_loader=test_loader,
     device=device,
-    use_edge_attr=False
+    use_edge_attr=True
 )
 
 logging.info(f'Shape of y_pred_tensor: {y_pred_tensor.shape}')
@@ -222,7 +228,7 @@ test_metrics_df = pd.DataFrame({
     'test_rmse': [rmse_loss.item()]
 })
 
-test_metrics_csv = '../deep_learning_outputs/model_evaluation/basic_gcn_test_evaluation_v01.csv'
+test_metrics_csv = '../deep_learning_outputs/model_evaluation/basic_gcn_test_evaluation_v02.csv'
 
 test_metrics_df.to_csv(
     test_metrics_csv,
@@ -239,7 +245,7 @@ y_test_array = y_test_tensor.flatten().numpy()
 logging.info(f'Shape of y_pred_array: {y_pred_array.shape}')
 logging.info(f'Shape of y_test_array: {y_test_array.shape}')
 
-npz_file = '../deep_learning_outputs/model_evaluation/basic_gcn_predicted_values_v01.npz'
+npz_file = '../deep_learning_outputs/model_evaluation/basic_gcn_predicted_values_v02.npz'
 
 np.savez(
     npz_file,
@@ -250,7 +256,7 @@ np.savez(
 logging.info(f'Successfully saved labels/ predicted values of test set as {npz_file}')
 
 # Plot predicted vs. True logP Values
-correlation_file = f'../deep_learning_outputs/model_evaluation/basic_gcn_correlation_plot_v01.png'
+correlation_file = f'../deep_learning_outputs/model_evaluation/basic_gcn_correlation_plot_v02.png'
 
 plot_logp_correlation(
     file=correlation_file,

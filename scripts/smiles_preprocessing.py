@@ -8,7 +8,8 @@ import logging
 # logging settings
 logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+    level=logging.INFO,
+    stream=sys.stdout  # Ensure logging outputs are printed into SLURM output file
 )
 
 # settings for hpc
@@ -46,12 +47,14 @@ logging.info('Successfully loaded logP.csv data')
 logging.info('Starting to process SMILES...')
 
 # Init lists
+canonical_smiles_list = []
 logP_Crippen_list = []
 mol_weights_list = []
 number_of_atoms_list = []
 mol_images_list = []
 mol_graphs_list = []
 mol_formula_list = []
+mol_descriptors_list = []
 
 # Process smiles
 for smiles, logP in zip(smiles_list, logP_list):
@@ -80,6 +83,15 @@ for smiles, logP in zip(smiles_list, logP_list):
     # Get loP value predicted by Crippen's method
     logP_Crippen_list.append(smiles_converter.get_crippen_logP())
 
+    # Get canonial SMILES
+    canonical_smiles_list.append(smiles_converter.get_canonical_smiles())
+
+    # Get molecular descriptors
+    mol_descriptors_list.append(smiles_converter.get_descriptors())
+
+    # Get descriptor_names
+    descriptor_names = smiles_converter.get_descriptor_names()
+
 logging.info(f'Finished processing {len(smiles_list)} SMILES entries')
 
 #
@@ -92,7 +104,7 @@ file = '../data/processed/logP_data_v01.npz'
 
 np.savez(
     file=file,
-    smiles=np.array(smiles_list),
+    smiles=np.array(canonical_smiles_list),
     logP=np.array(logP_list),
     logP_Crippen=np.array(logP_Crippen_list),
     mol_images=np.array(mol_images_list),
@@ -125,7 +137,7 @@ logging.info('Saving processed data as csv-file...')
 
 # Create new df
 logP_processed_df = pd.DataFrame({
-    'smiles':smiles_list,
+    'smiles':canonical_smiles_list,
     'number_of_atoms':number_of_atoms_list,
     'molecular_formula':mol_formula_list,
     'molecular_weight':mol_weights_list,
@@ -139,3 +151,24 @@ csv_file = '../data/processed/logP_processed_v01.csv'
 logP_processed_df.to_csv(csv_file, header=True, index=False)
 
 logging.info(f'Saved processed data as {csv_file}')
+
+#
+#   6. Process, clean and save molecular descriptors
+#
+
+logging.info('Saving molecular descriptors as csv-file...')
+
+# convert molecular descriptors to df
+logP_molecular_descriptors = pd.DataFrame(data=mol_descriptors_list, columns=descriptor_names)
+
+logP_molecular_descriptors.insert(0, 'smiles', canonical_smiles_list)
+logP_molecular_descriptors.insert(1, 'logP', logP_list)
+
+# Drop molecular descriptors if they contain NaN values
+logP_molecular_descriptors.dropna(axis=1, how='any', inplace=True)
+
+descriptor_csv_file = '../data/processed/logP_molecular_descriptors_v01.csv'
+
+logP_molecular_descriptors.to_csv(descriptor_csv_file, header=True, index=False)
+
+logging.info(f'Saved molecular descriptors data as {descriptor_csv_file}')

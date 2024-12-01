@@ -1,15 +1,13 @@
 # import necessary packages
 from collections import Counter
-from rdkit.Chem import MolFromSmiles, AddHs
+from rdkit.Chem import MolFromSmiles, MolToSmiles, AddHs, Descriptors
+from rdkit.ML.Descriptors import MoleculeDescriptors
 from rdkit.Chem.Descriptors import MolWt
 from rdkit.Chem.Draw import MolToImage
 from rdkit.Chem.Crippen import MolLogP
 from torch_geometric.utils import from_smiles
-from torch_geometric.data import Data
 import torch
 from torch.utils.data import Dataset
-
-
 from pysmilesutils.augment import SMILESAugmenter
 
 # TODO: Add Docstrings for class
@@ -22,7 +20,10 @@ class SMILESConverter:
         self.image_size = image_size
 
         self.mol = self.smiles_to_mol()
+        self.mol_h = AddHs(self.mol)
+        self.canonical_smiles = self.mol_to_smiles()
         self.graph = self.mol_to_graph()
+        self.calc = MoleculeDescriptors.MolecularDescriptorCalculator([x[0] for x in Descriptors._descList])
 
     def smiles_to_mol(self):
 
@@ -37,6 +38,9 @@ class SMILESConverter:
 
         return mol
 
+    def mol_to_smiles(self):
+        return MolToSmiles(self.mol)
+
     def get_mol_weight(self):
         return MolWt(self.mol)
 
@@ -44,11 +48,7 @@ class SMILESConverter:
         return MolLogP(self.mol)
 
     def get_number_of_atoms(self):
-
-        # Add hydrogens to mol-object to get the right count
-        mol_h = AddHs(self.mol)
-
-        return mol_h.GetNumAtoms()
+        return self.mol_h.GetNumAtoms()
 
     def get_molecular_formula(self):
 
@@ -94,7 +94,7 @@ class SMILESConverter:
     def mol_to_graph(self):
 
         # Create PyG Graph
-        graph = from_smiles(self.smiles)
+        graph = from_smiles(self.canonical_smiles)
 
         # Convert Node mat into float
         graph.x = graph.x.float()
@@ -109,7 +109,15 @@ class SMILESConverter:
 
     def get_graph(self):
         return self.graph
-    
+
+    def get_canonical_smiles(self):
+        return self.canonical_smiles
+
+    def get_descriptors(self):
+        return self.calc.CalcDescriptors(self.mol_h)
+
+    def get_descriptor_names(self):
+        return self.calc.GetDescriptorNames()
     
 
     

@@ -11,7 +11,8 @@ from .pytorch_model_training import (
 
 from .pytorch_data_handling import (
     split_dataset,
-    split_SMILE_Dataset
+    split_SMILE_Dataset,
+    split_SMILES
 )
 
 from .pytorch_loss_metrics import (

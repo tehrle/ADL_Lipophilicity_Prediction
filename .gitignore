@@ -8,4 +8,8 @@
 __pycache__/
 .pyc
 
+# Scratch Space
 scratch_space/
+
+# Vscode Stuff
+.vscode/*

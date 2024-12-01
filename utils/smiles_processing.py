@@ -182,7 +182,7 @@ class SMILESDataset(Dataset):
 
     
 class SMILESAugmentation:
-    def __init__(self, train_dataset, tokenizer):
+    def __init__(self, train_dataset, tokenizer = None):
         """
         Initializes the SMILES processing class with a training dataset and a tokenizer.
         Args:
@@ -193,6 +193,7 @@ class SMILESAugmentation:
             tokenizer (Tokenizer): Stores the provided tokenizer.
         Iterates over the training dataset, decodes each SMILES string using the tokenizer, and processes the data.
         """
+        
         self.train_dataset = train_dataset
         self.tokenizer = tokenizer
 
@@ -207,6 +208,10 @@ class SMILESAugmentation:
             for i in train_dataset:
                 self.smiles.append(self.tokenizer.decode(i[0]))
                 self.targets.append(i[1])
+
+        elif isinstance(train_dataset, list):
+            self.smiles = train_dataset[0]
+            self.targets = train_dataset[1]
             
 
         

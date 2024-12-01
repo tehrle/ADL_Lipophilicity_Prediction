@@ -58,4 +58,30 @@ def split_SMILE_Dataset(dataset, ratio, seed=None):
     return split1_dataset, split2_dataset
 
 
+def split_SMILES(smiles, targets, ratio, seed=None):
+    if seed is not None:
+        torch.manual_seed(seed)
     
+    total_size = len(smiles)
+    split_size = int(total_size * ratio)
+    
+    # Split the dataset into two parts with random indices based on the ratio
+    split1_smiles = []
+    split1_targets = []
+    split2_smiles = []
+    split2_targets = []
+
+    indices = torch.randperm(total_size)
+    split1_indices = indices[:split_size]
+    split2_indices = indices[split_size:]
+
+    for idx in split1_indices:
+        split1_smiles.append(smiles[idx])
+        split1_targets.append(targets[idx])
+    
+    for idx in split2_indices:
+        split2_smiles.append(smiles[idx])
+        split2_targets.append(targets[idx])
+
+    return split1_smiles, split1_targets, split2_smiles, split2_targets
+

@@ -100,7 +100,7 @@ def objective(trial):
 
 # Run optimization
 study = optuna.create_study(direction='minimize')
-study.optimize(objective, n_trials=1)
+study.optimize(objective, n_trials=100)
 
 # Save all trial results as CSV
 results_csv = '../deep_learning_outputs/training_logs/xgb_regressor_hyperparameter_tuning_v01.csv'

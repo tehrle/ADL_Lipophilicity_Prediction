@@ -19,7 +19,6 @@ os.chdir(script_dir)  # change the current directory to the specified directory
 
 # insert top dir to system path for hpc
 sys.path.insert(0, '../')
-
 # logging settings
 logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -76,14 +75,13 @@ class SMILESDataset(Dataset):
 if __name__ == "__main__":
     # Parameters
     max_len = 180  # Maximum SMILES length
-    embed_dim = 128
     dropout = 0.1
     num_heads = 8
     num_layers = 4
     ff_dim = 512
     output_dim = 1
     batch_size = 32  # Start with a smaller batch size
-    num_epochs = 10
+    num_epochs = 200
     learning_rate = 1e-4
     validation_split = 0.2  # 20% of data for validation
 
@@ -191,7 +189,8 @@ if __name__ == "__main__":
     plt.ylabel("Loss")
     plt.legend()
     plt.title("Training and Validation Losses")
-    plt.show()
+    plt.savefig("../deep_learning_outputs/figures/SPT_v4_loss_01.png", dpi=300)
+
 
     # Evaluate on validation set for plotting true vs predicted values
     model.eval()
@@ -224,10 +223,10 @@ if __name__ == "__main__":
     plt.title("True vs Predicted Values (Validation Set)")
     plt.plot([min(all_true_values), max(all_true_values)],
              [min(all_true_values), max(all_true_values)], 'r--')
-    plt.show()
+    plt.savefig("../deep_learning_outputs/figures/SPT_v4_loss_01.png", dpi=300)
 
     # Save the trained prediction layer
     torch.save({
         'model_state_dict': model.state_dict(),
         'prediction_layer_state_dict': prediction_layer.state_dict()
-    }, "smiles_property_predictor.pth")
+    }, "../deep_learning_outputs/trained_models/smiles_property_predictor.pth")

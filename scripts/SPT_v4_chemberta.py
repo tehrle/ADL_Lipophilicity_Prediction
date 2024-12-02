@@ -81,7 +81,7 @@ if __name__ == "__main__":
     ff_dim = 512
     output_dim = 1
     batch_size = 32  # Start with a smaller batch size
-    num_epochs = 200
+    num_epochs = 20
     learning_rate = 1e-4
     validation_split = 0.2  # 20% of data for validation
 
@@ -189,7 +189,7 @@ if __name__ == "__main__":
     plt.ylabel("Loss")
     plt.legend()
     plt.title("Training and Validation Losses")
-    plt.savefig("../deep_learning_outputs/figures/SPT_v4_loss_01.png", dpi=300)
+    plt.savefig("../deep_learning_outputs/figures/SPT_v4_loss_02.png", dpi=300)
 
 
     # Evaluate on validation set for plotting true vs predicted values
@@ -223,7 +223,9 @@ if __name__ == "__main__":
     plt.title("True vs Predicted Values (Validation Set)")
     plt.plot([min(all_true_values), max(all_true_values)],
              [min(all_true_values), max(all_true_values)], 'r--')
-    plt.savefig("../deep_learning_outputs/figures/SPT_v4_loss_01.png", dpi=300)
+    plt.text(0.5, 0.1, f"RMSE: {loss_fn(torch.tensor(all_predictions), torch.tensor(all_true_values)).item():.4f}",
+             ha='center', va='center', transform=plt.gca().transAxes)
+    plt.savefig("../deep_learning_outputs/figures/SPT_v4_predict_02.png", dpi=300)
 
     # Save the trained prediction layer
     torch.save({

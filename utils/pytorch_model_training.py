@@ -1,8 +1,12 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.optim as optim
 from .pytorch_loss_metrics import RMSELoss
 from tqdm import tqdm
+from .pytorch_custom_layers import LogPPredictionModel
+import matplotlib.pyplot as plt
+import optuna
 
 #=======================================================================================================================
 #
@@ -197,3 +201,99 @@ def evaluate_STP_model(model, dataloader, criterion, device):
     return total_loss / len(dataloader), predictions, targets_list
 
 #=======================================================================================================================
+# For transformer model with attention mask
+#
+def train_STP(model, dataloader, optimizer, criterion, device):
+    model.train()
+    total_loss = 0
+    for batch in tqdm(dataloader, desc="Training", leave=False):
+        batch_input_ids, batch_attention_mask, batch_labels = batch
+        batch_input_ids, batch_attention_mask, batch_labels = batch_input_ids.to(device), batch_attention_mask.to(device), batch_labels.to(device)
+        
+        optimizer.zero_grad()
+        outputs = model(input_ids=batch_input_ids, attention_mask=batch_attention_mask)
+        loss = criterion(outputs, batch_labels)
+        loss.backward()
+        optimizer.step()
+        
+        total_loss += loss.item()
+    return total_loss / len(dataloader)
+
+def evaluate_STP(model, dataloader, criterion, device):
+    model.eval()
+    total_loss = 0
+    predictions = []
+    targets_list = []
+    with torch.no_grad():
+        for batch in tqdm(dataloader, desc="Evaluating", leave=False):
+            batch_input_ids, batch_attention_mask, batch_labels = batch
+            batch_input_ids, batch_attention_mask, batch_labels = batch_input_ids.to(device), batch_attention_mask.to(device), batch_labels.to(device)
+            
+            outputs = model(input_ids=batch_input_ids, attention_mask=batch_attention_mask)
+            loss = criterion(outputs, batch_labels)
+            total_loss += loss.item()
+            
+            predictions.extend(outputs.cpu().numpy())
+            targets_list.extend(batch_labels.cpu().numpy())
+    return total_loss / len(dataloader), predictions, targets_list
+
+#=======================================================================================================================
+# Hyperparameter Tuning
+
+def objective(trial, pre_model, train_dataset, val_dataset, device, epochs):
+    # Suggest hyperparameters
+    dropout = trial.suggest_float('dropout', 0.1, 0.5)
+    num_heads = trial.suggest_int('num_heads', 1, 8)
+    num_layers = trial.suggest_int('num_layers', 1, 6)
+    ff_dim = trial.suggest_categorical('ff_dim', [256, 512, 1024])
+    learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-3)
+    batch_size = trial.suggest_categorical('batch_size', [32, 64, 128])
+
+    # Prepare data loaders with the suggested batch size
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+
+    # Initialize the combined model with the suggested hyperparameters
+    combined_model = LogPPredictionModel(
+        pre_model,
+        dropout=dropout,
+        embed_size=pre_model.config.hidden_size,
+        num_heads=num_heads,
+        ff_hidden_dim=ff_dim,
+        num_layers=num_layers
+    ).to(device)
+
+    # Define criterion and optimizer
+    criterion = RMSELoss()
+    optimizer = optim.Adam(combined_model.parameters(), lr=learning_rate)
+
+    # Training loop
+    num_epochs = epochs  # You can keep this fixed or make it a hyperparameter
+    val_losses = []
+    train_losses = []
+    for epoch in range(num_epochs):
+        train_loss = train_STP(combined_model, train_loader, optimizer, criterion, device)
+        val_loss, _, _ = evaluate_STP(combined_model, val_loader, criterion, device)
+
+        val_losses.append(val_loss)
+        train_losses.append(train_loss)
+        # Report intermediate objective value
+        trial.report(val_loss, epoch)
+
+        # Handle pruning (optional)
+        if trial.should_prune():
+            raise optuna.exceptions.TrialPruned()
+        
+    # plot and save the loss
+    # Plot training and validation losses
+    plt.figure()
+    plt.plot(range(1, num_epochs + 1), train_losses, label="Train Loss")
+    plt.plot(range(1, num_epochs + 1), val_losses, label="Validation Loss")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.title("Training and Validation Losses")
+    plt.savefig(f"../deep_learning_outputs/figures/Hypertuning/STP_v6_loss_trial_{trial.number}.png")
+        
+
+    return val_loss

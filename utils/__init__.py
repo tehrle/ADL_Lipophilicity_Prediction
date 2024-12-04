@@ -6,7 +6,10 @@ from .pytorch_model_training import (
     validate_graph_model,
     predict_graph_model,
     train_STP_model,
-    evaluate_STP_model
+    evaluate_STP_model,
+    train_STP,
+    evaluate_STP,
+    objective
 )
 
 from .pytorch_data_handling import (
@@ -31,5 +34,6 @@ from .smiles_processing import (
 )
 
 from .pytorch_custom_layers import (
-    TransformerBlock
+    TransformerBlock,
+    LogPPredictionModel
 )

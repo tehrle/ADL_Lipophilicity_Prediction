@@ -68,7 +68,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 logging.info(f'The following device is used for model training: {device}')
 
 class SimpleGAT(nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels, edge_dim, num_heads=1, dropout=0):
+    def __init__(self, in_channels, hidden_channels, out_channels, edge_dim, num_heads=1, dropout=0.0):
         super(SimpleGAT, self).__init__()
 
         self.dropout = dropout

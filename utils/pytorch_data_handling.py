@@ -108,7 +108,7 @@ def split_SMILE_Dataset(dataset, ratio, seed=None):
     return split1_dataset, split2_dataset
 
 def split_SMILES(smiles, targets, ratio, seed=None):
-    '''
+    """
     This function splits lists of SMILES strings and their corresponding targets into two subsets based on the
     specified ratio.
 
@@ -128,7 +128,7 @@ def split_SMILES(smiles, targets, ratio, seed=None):
     tuple
         Four lists: SMILES strings and targets for the first subset, and SMILES strings
         and targets for the second subset.
-    '''
+    """
     if seed is not None:
         torch.manual_seed(seed)
     

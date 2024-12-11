@@ -1,3 +1,28 @@
+"""
+This module provides functions for training, evaluating, and hyperparameter tuning of PyTorch models,
+including graph neural networks (GNNs) and transformer-based models.
+
+Functions:
+-----------
+- predict_graph_model: Makes predictions with a graph neural network (GNN) model.
+- validate_graph_model: Validates a GNN model and computes metrics.
+- train_graph_model: Trains a GNN model while tracking training and validation metrics.
+- train_STP_model: Trains a transformer-based model.
+- evaluate_STP_model: Evaluates a transformer-based model.
+- train_STP: Trains a transformer-based model with attention masks.
+- evaluate_STP: Evaluates a transformer-based model with attention masks.
+- objective: Optimizes hyperparameters for transformer-based models using Optuna.
+
+Authors:
+--------
+Timo Ehrle & Levin Willi
+
+Last Modified:
+--------------
+10.12.2024
+"""
+
+# import necessary packages
 import numpy as np
 import torch
 import torch.nn as nn
@@ -7,13 +32,31 @@ from tqdm import tqdm
 from .pytorch_custom_layers import LogPPredictionModel
 import matplotlib.pyplot as plt
 import optuna
-
 #=======================================================================================================================
 #
-#   For graph neural network!
+#   For graph neural networks
 #
 
 def predict_graph_model(model, test_loader, device, use_edge_attr=True):
+    """
+    Makes predictions using a graph neural network (GNN) model on test data.
+
+    Parameters:
+    -----------
+    model : torch.nn.Module
+        The GNN model to be used for predictions.
+    test_loader : torch_geometric.loaders.DataLoader
+        DataLoader for the test dataset containing graph data.
+    device : torch.device
+        The device (CPU/GPU) to run the model on.
+    use_edge_attr : bool, optional
+        Whether to include edge attributes in the prediction. Defaults to True.
+
+    Returns:
+    --------
+    tuple of torch.Tensor
+        Predicted values (`y_pred_tensor`) and true target values (`y_test_tensor`).
+    """
     # Init list for predictions / labels
     test_targets = []
     test_predictions = []
@@ -45,6 +88,33 @@ def predict_graph_model(model, test_loader, device, use_edge_attr=True):
     return y_pred_tensor, y_test_tensor
 
 def validate_graph_model(model, val_loader, loss_fn, device, mae_loss, mse_loss, rmse_loss, use_edge_attr=True):
+    """
+    Validates a graph neural network (GNN) model and computes evaluation metrics.
+
+    Parameters:
+    -----------
+    model : torch.nn.Module
+        The GNN model to be validated.
+    val_loader : torch_geometric.loaders.DataLoader
+        DataLoader for the validation dataset containing graph data.
+    loss_fn : callable
+        The primary loss function used for evaluation.
+    device : torch.device
+        The device (CPU/GPU) to run the model on.
+    mae_loss : callable
+        The mean absolute error (MAE) loss function.
+    mse_loss : callable
+        The mean squared error (MSE) loss function.
+    rmse_loss : callable
+        The root mean squared error (RMSE) loss function.
+    use_edge_attr : bool, optional
+        Whether to include edge attributes in the validation. Defaults to True.
+
+    Returns:
+    --------
+    tuple of float
+        Mean values of loss, MAE, MSE, and RMSE over the validation dataset.
+    """
     # Initialize validation val_metrics
     val_metrics = {
         'loss': [],
@@ -88,6 +158,33 @@ def validate_graph_model(model, val_loader, loss_fn, device, mae_loss, mse_loss,
 
 
 def train_graph_model(model, num_epochs, optimizer, loss_fn, train_loader, val_loader, device, use_edge_attr=True):
+    """
+    Trains a graph neural network (GNN) model while tracking training and validation metrics.
+
+    Parameters:
+    -----------
+    model : torch.nn.Module
+        The GNN model to be trained.
+    num_epochs : int
+        The number of training epochs.
+    optimizer : torch.optim.Optimizer
+        The optimizer for training.
+    loss_fn : callable
+        The primary loss function used for training.
+    train_loader : torch_geometric.loaders.DataLoader
+        DataLoader for the training dataset containing graph data.
+    val_loader : torch_geometric.loaders.DataLoader
+        DataLoader for the validation dataset containing graph data.
+    device : torch.device
+        The device (CPU/GPU) to run the model on.
+    use_edge_attr : bool, optional
+        Whether to include edge attributes in the training. Defaults to True.
+
+    Returns:
+    --------
+    dict
+        A dictionary containing tracked training and validation metrics for all epochs.
+    """
     # Tracked Metrics
     metrics = {
         'epoch': np.arange(1, num_epochs + 1),
@@ -183,11 +280,32 @@ def train_graph_model(model, num_epochs, optimizer, loss_fn, train_loader, val_l
     return metrics
 
 #=======================================================================================================================
-#  For transformer model
+#
+#  For transformer based models
 #
 
 def train_STP_model(model, dataloader, optimizer, criterion, device):
+    """
+    Trains a transformer-based model.
 
+    Parameters:
+    -----------
+    model : torch.nn.Module
+        The transformer-based model to be trained.
+    dataloader : torch.utils.data.DataLoader
+        DataLoader for the training dataset.
+    optimizer : torch.optim.Optimizer
+        The optimizer for training.
+    criterion : callable
+        The loss function used for training.
+    device : torch.device
+        The device (CPU/GPU) to run the model on.
+
+    Returns:
+    --------
+    float
+        The average training loss over all batches.
+    """
     model.train()
     total_loss = 0
     for inputs, targets in dataloader: #tqdm(dataloader, desc="Training", leave=False):
@@ -201,6 +319,25 @@ def train_STP_model(model, dataloader, optimizer, criterion, device):
     return total_loss / len(dataloader)
 
 def evaluate_STP_model(model, dataloader, criterion, device):
+    """
+    Evaluates a transformer-based model.
+
+    Parameters:
+    -----------
+    model : torch.nn.Module
+        The transformer-based model to be evaluated.
+    dataloader : torch.utils.data.DataLoader
+        DataLoader for the evaluation dataset.
+    criterion : callable
+        The loss function used for evaluation.
+    device : torch.device
+        The device (CPU/GPU) to run the model on.
+
+    Returns:
+    --------
+    tuple
+        Average evaluation loss, list of predictions, and list of true target values.
+    """
     model.eval()
     total_loss = 0
     predictions = []
@@ -219,6 +356,27 @@ def evaluate_STP_model(model, dataloader, criterion, device):
 # For transformer model with attention mask
 #
 def train_STP(model, dataloader, optimizer, criterion, device):
+    """
+    Trains a transformer-based model with attention masks.
+
+    Parameters:
+    -----------
+    model : torch.nn.Module
+        The transformer-based model to be trained.
+    dataloader : torch.utils.data.DataLoader
+        DataLoader for the training dataset.
+    optimizer : torch.optim.Optimizer
+        The optimizer for training.
+    criterion : callable
+        The loss function used for training.
+    device : torch.device
+        The device (CPU/GPU) to run the model on.
+
+    Returns:
+    --------
+    float
+        The average training loss over all batches.
+    """
     model.train()
     total_loss = 0
     for batch in tqdm(dataloader, desc="Training", leave=False):
@@ -235,6 +393,25 @@ def train_STP(model, dataloader, optimizer, criterion, device):
     return total_loss / len(dataloader)
 
 def evaluate_STP(model, dataloader, criterion, device):
+    """
+    Evaluates a transformer-based model with attention masks.
+
+    Parameters:
+    -----------
+    model : torch.nn.Module
+        The transformer-based model to be evaluated.
+    dataloader : torch.utils.data.DataLoader
+        DataLoader for the evaluation dataset.
+    criterion : callable
+        The loss function used for evaluation.
+    device : torch.device
+        The device (CPU/GPU) to run the model on.
+
+    Returns:
+    --------
+    tuple
+        Average evaluation loss, list of predictions, and list of true target values.
+    """
     model.eval()
     total_loss = 0
     predictions = []
@@ -256,6 +433,29 @@ def evaluate_STP(model, dataloader, criterion, device):
 # Hyperparameter Tuning
 
 def objective(trial, pre_model, train_dataset, val_dataset, device, epochs):
+    """
+    Optimizes hyperparameters for transformer-based models.
+
+    Parameters:
+    -----------
+    trial : optuna.trial.Trial
+        The Optuna trial object for hyperparameter optimization.
+    pre_model : torch.nn.Module
+        Pretrained model to be extended.
+    train_dataset : torch.utils.data.Dataset
+        Training dataset.
+    val_dataset : torch.utils.data.Dataset
+        Validation dataset.
+    device : torch.device
+        The device (CPU/GPU) to run the model on.
+    epochs : int
+        Number of training epochs for each trial.
+
+    Returns:
+    --------
+    float
+        Validation loss of the model for the current trial.
+    """
     # Suggest hyperparameters
     dropout = trial.suggest_float('dropout', 0.1, 0.5)
     num_heads = trial.suggest_categorical('num_heads', [1, 2, 4, 8])
@@ -309,7 +509,6 @@ def objective(trial, pre_model, train_dataset, val_dataset, device, epochs):
     plt.legend()
     plt.title("Training and Validation Losses")
     plt.savefig(f"../deep_learning_outputs/figures/Hypertuning/STP_v6_loss_trial_{trial.number}.png")
-        
 
     return val_loss
 

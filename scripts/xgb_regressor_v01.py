@@ -1,3 +1,18 @@
+"""
+XGBRegressor Training and Hyperparameter Tuning
+
+This script trains and evaluates an XGBRegressor model using molecular descriptors extracted from SMILES data.
+The script includes preprocessing, hyperparameter tuning with Optuna, model training, evaluation, and visualization.
+
+Authors:
+--------
+Timo Ehrle
+
+Last Modified:
+--------------
+10.12.2024
+"""
+
 # import necessary packages
 import numpy as np
 import pandas as pd

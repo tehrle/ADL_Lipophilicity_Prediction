@@ -1,3 +1,18 @@
+"""
+SMILES Data Preprocessing
+
+This script processes SMILES data from a CSV file and converts it into molecular graphs, molecular descriptors,
+molecular images, and extracts various molecular properties.
+
+Authors:
+--------
+Timo Ehrle
+
+Last Modified:
+--------------
+10.12.2024
+"""
+# import necessary packages
 import numpy as np
 import pandas as pd
 import torch
@@ -20,7 +35,6 @@ os.chdir(script_dir)    # change the current directory to the specified director
 # insert top dir to system path for hpc
 sys.path.insert(0, '../')
 from utils import SMILESConverter
-
 #=======================================================================================================================
 
 #

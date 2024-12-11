@@ -308,7 +308,7 @@ def train_STP_model(model, dataloader, optimizer, criterion, device):
     """
     model.train()
     total_loss = 0
-    for inputs, targets in tqdm(dataloader, desc="Training", leave=False):
+    for inputs, targets in dataloader: #tqdm(dataloader, desc="Training", leave=False):
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
         outputs = model(inputs)
@@ -343,7 +343,7 @@ def evaluate_STP_model(model, dataloader, criterion, device):
     predictions = []
     targets_list = []
     with torch.no_grad():
-        for inputs, targets in tqdm(dataloader, desc="Evaluating", leave=False):
+        for inputs, targets in dataloader: #tqdm(dataloader, desc="Evaluating", leave=False):
             inputs, targets = inputs.to(device), targets.to(device)
             outputs = model(inputs)
             loss = criterion(outputs, targets.unsqueeze(1))
@@ -458,11 +458,11 @@ def objective(trial, pre_model, train_dataset, val_dataset, device, epochs):
     """
     # Suggest hyperparameters
     dropout = trial.suggest_float('dropout', 0.1, 0.5)
-    num_heads = trial.suggest_int('num_heads', 1, 8)
+    num_heads = trial.suggest_categorical('num_heads', [1, 2, 4, 8])
     num_layers = trial.suggest_int('num_layers', 1, 6)
     ff_dim = trial.suggest_categorical('ff_dim', [256, 512, 1024])
     learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-3)
-    batch_size = trial.suggest_categorical('batch_size', [32, 64, 128])
+    batch_size = trial.suggest_categorical('batch_size', [16, 32, 64, 128])
 
     # Prepare data loaders with the suggested batch size
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -511,3 +511,5 @@ def objective(trial, pre_model, train_dataset, val_dataset, device, epochs):
     plt.savefig(f"../deep_learning_outputs/figures/Hypertuning/STP_v6_loss_trial_{trial.number}.png")
 
     return val_loss
+
+

@@ -17,7 +17,9 @@ Last Modified:
 
 # import necessary packages
 import torch.nn as nn
+import torch
 #=======================================================================================================================
+
 
 class TransformerBlock(nn.Module):
     """
@@ -178,3 +180,97 @@ class LogPPredictionModel(nn.Module):
         # MLP Head for regression
         output = self.mlp_head(x)
         return output
+
+
+class STP(nn.Module):
+    def __init__(self, vocab_size, embed_size, num_heads, ff_hidden_dim, num_layers, dropout, max_seq_length):
+        super(STP, self).__init__()
+        
+        # Input Embedding Layer
+        self.embedding = nn.Embedding(vocab_size, embed_size)
+        self.positional_encoding = nn.Parameter(torch.zeros(1, max_seq_length, embed_size))
+        
+        # Transformer Layers
+        self.layers = nn.ModuleList([
+            TransformerBlock(embed_size, num_heads, ff_hidden_dim, dropout)
+            for _ in range(num_layers)
+        ])
+        
+        # Regression Head
+        self.norm = nn.LayerNorm(embed_size)
+        self.max_pool = nn.AdaptiveMaxPool1d(1)
+        self.mlp_head = nn.Sequential(
+            nn.Linear(embed_size, ff_hidden_dim),
+            nn.ReLU(),
+            nn.Linear(ff_hidden_dim, 1)  # Output is a single regression value
+        )
+    
+    def forward(self, x):
+        # Input embedding with positional encoding
+        batch_size, seq_length = x.size()
+        embed = self.embedding(x) + self.positional_encoding[:, :seq_length, :]
+
+        # Transformer blocks
+        out = embed.permute(1, 0, 2)  # (seq_len, batch_size, embed_size)
+        for layer in self.layers:
+            out = layer(out)
+        out = out.permute(1, 0, 2)  # (batch_size, seq_len, embed_size)
+
+        # Apply LayerNorm over the embed_size dimension
+        out = self.norm(out)  # Now out has shape (batch_size, seq_len, embed_size)
+
+        # Max pooling over the sequence length
+        out = out.permute(0, 2, 1)  # (batch_size, embed_size, seq_len)
+        out = self.max_pool(out).squeeze(-1)  # Now out has shape (batch_size, embed_size)
+
+        # Regression Head
+        out = self.mlp_head(out)
+        return out
+    
+
+class STP_Tahn(nn.Module):
+    def __init__(self, vocab_size, embed_size, num_heads, ff_hidden_dim, num_layers, dropout, max_seq_length):
+        super(STP_Tahn, self).__init__()
+        
+        # Input Embedding Layer
+        self.embedding = nn.Embedding(vocab_size, embed_size)
+        self.positional_encoding = nn.Parameter(torch.zeros(1, max_seq_length, embed_size))
+        
+        # Transformer Layers
+        self.layers = nn.ModuleList([
+            TransformerBlock(embed_size, num_heads, ff_hidden_dim, dropout)
+            for _ in range(num_layers)
+        ])
+        
+        # Regression Head
+        self.norm = nn.LayerNorm(embed_size)
+        self.max_pool = nn.AdaptiveMaxPool1d(1)
+        self.mlp_head = nn.Sequential(
+            nn.Linear(embed_size, ff_hidden_dim),
+            nn.LeakyReLU(negative_slope=0.01),
+            nn.Linear(ff_hidden_dim, ff_hidden_dim // 2),
+            nn.LeakyReLU(negative_slope=0.01),
+            nn.Linear(ff_hidden_dim // 2, 1)
+        )
+
+    def forward(self, x):
+        # Input embedding with positional encoding
+        batch_size, seq_length = x.size()
+        embed = self.embedding(x) + self.positional_encoding[:, :seq_length, :]
+
+        # Transformer blocks
+        out = embed.permute(1, 0, 2)  # (seq_len, batch_size, embed_size)
+        for layer in self.layers:
+            out = layer(out)
+        out = out.permute(1, 0, 2)  # (batch_size, seq_len, embed_size)
+
+        # Apply LayerNorm over the embed_size dimension
+        out = self.norm(out)  # Now out has shape (batch_size, seq_len, embed_size)
+
+        # Max pooling over the sequence length
+        out = out.permute(0, 2, 1)  # (batch_size, embed_size, seq_len)
+        out = self.max_pool(out).squeeze(-1)  # Now out has shape (batch_size, embed_size)
+
+        # Regression Head
+        out = self.mlp_head(out)
+        return out

@@ -33,55 +33,14 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-from utils import split_dataset,split_SMILE_Dataset, SMILESDataset, TransformerBlock, train_STP_model, evaluate_STP_model,RMSELoss,SMILESAugmentation
+from utils import (split_dataset,split_SMILE_Dataset, SMILESDataset, 
+                    TransformerBlock, train_STP_model, evaluate_STP_model,
+                    RMSELoss,SMILESAugmentation, STP)
 
 
 
 
-class SMILESPropertyPredictor(nn.Module):
-    def __init__(self, vocab_size, embed_size, num_heads, ff_hidden_dim, num_layers, dropout, max_seq_length):
-        super(SMILESPropertyPredictor, self).__init__()
-        
-        # Input Embedding Layer
-        self.embedding = nn.Embedding(vocab_size, embed_size)
-        self.positional_encoding = nn.Parameter(torch.zeros(1, max_seq_length, embed_size))
-        
-        # Transformer Layers
-        self.layers = nn.ModuleList([
-            TransformerBlock(embed_size, num_heads, ff_hidden_dim, dropout)
-            for _ in range(num_layers)
-        ])
-        
-        # Regression Head
-        self.norm = nn.LayerNorm(embed_size)
-        self.max_pool = nn.AdaptiveMaxPool1d(1)
-        self.mlp_head = nn.Sequential(
-            nn.Linear(embed_size, ff_hidden_dim),
-            nn.ReLU(),
-            nn.Linear(ff_hidden_dim, 1)  # Output is a single regression value
-        )
-    
-    def forward(self, x):
-        # Input embedding with positional encoding
-        batch_size, seq_length = x.size()
-        embed = self.embedding(x) + self.positional_encoding[:, :seq_length, :]
 
-        # Transformer blocks
-        out = embed.permute(1, 0, 2)  # (seq_len, batch_size, embed_size)
-        for layer in self.layers:
-            out = layer(out)
-        out = out.permute(1, 0, 2)  # (batch_size, seq_len, embed_size)
-
-        # Apply LayerNorm over the embed_size dimension
-        out = self.norm(out)  # Now out has shape (batch_size, seq_len, embed_size)
-
-        # Max pooling over the sequence length
-        out = out.permute(0, 2, 1)  # (batch_size, embed_size, seq_len)
-        out = self.max_pool(out).squeeze(-1)  # Now out has shape (batch_size, embed_size)
-
-        # Regression Head
-        out = self.mlp_head(out)
-        return out
 
 # Training and Evaluation
 
@@ -129,13 +88,15 @@ if __name__ == "__main__":
     logging.info(f'Test data shape: {len(test_dataset)}')
 
     
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    # train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    # val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     
     # Model, Optimizer, Loss
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    model = SMILESPropertyPredictor(len(tokenizer), embed_dim, num_heads, ff_dim, num_layers, dropout, max_len).to(device)
+
+
+    model = STP(len(tokenizer), embed_dim, num_heads, ff_dim, num_layers, dropout, max_len).to(device)
     
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     #loss_fn = nn.MSELoss()

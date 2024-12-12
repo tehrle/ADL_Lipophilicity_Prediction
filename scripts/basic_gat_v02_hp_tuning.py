@@ -29,7 +29,7 @@ os.chdir(script_dir)    # change the current directory to the specified director
 
 # insert top dir to system path for hpc
 sys.path.insert(0, '../')
-from utils import split_dataset, train_graph_model, plot_history, predict_graph_model, RMSELoss, plot_logp_correlation
+from utils import split_dataset, train_graph_model
 #=======================================================================================================================
 
 #
@@ -217,7 +217,7 @@ def objective(trial):
 logging.info('Starting to tune dropout rate...')
 
 # Create Optuna Study
-n_trials = 100
+n_trials = 50
 study = optuna.create_study(study_name='basic_gat_hp_tuning_v01', direction='minimize')
 study.optimize(objective, n_trials=n_trials)
 

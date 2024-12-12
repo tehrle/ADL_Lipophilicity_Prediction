@@ -81,7 +81,7 @@ if __name__ == "__main__":
     # num_layers = 3
     # ff_dim = 512
     # batch_size = 32
-    num_epochs = 30
+    num_epochs = 20
     # learning_rate = 1e-4
 
     train_dataset = torch.utils.data.TensorDataset(input_ids, attention_mask, targets)
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     # criterion = RMSELoss()
     # optimizer = optim.Adam(combined_model.parameters(), lr=learning_rate)
 
-
+    '''
     study = optuna.create_study(direction='minimize')
     study.optimize(lambda trial: objective(trial, pre_model= model, train_dataset=train_dataset, val_dataset= val_dataset, device=device, epochs= num_epochs), n_trials=30)
 
@@ -111,14 +111,14 @@ if __name__ == "__main__":
 
     logging.info(f"Best hyperparameters: {best_params}")
     # save best hyperparameters to a text file
-    with open("../deep_learning_outputs/figures/Hypertuning/STP_v6_best_param.txt", "w") as f:
+    with open("../deep_learning_outputs/figures/Hypertuning/STP_v6_best_param_02.txt", "w") as f:
         f.write(f"Best hyperparameters: {best_params}")
 
     # save all trials to a csv file
-    study.trials_dataframe().to_csv("../deep_learning_outputs/figures/Hypertuning/STP_v6_trials.csv")
-
+    study.trials_dataframe().to_csv("../deep_learning_outputs/figures/Hypertuning/STP_v6_trials_02.csv")
+    '''
     # Prepare data loaders with the best batch size
-    batch_size = best_params['batch_size']
+    batch_size = 64 #best_params['batch_size']
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
@@ -126,19 +126,19 @@ if __name__ == "__main__":
     # Initialize the combined model with the best hyperparameters
     combined_model = LogPPredictionModel(
         model,
-        dropout=best_params['dropout'],
+        dropout= 0.1, #best_params['dropout'],
         embed_size=model.config.hidden_size,
-        num_heads=best_params['num_heads'],
-        ff_hidden_dim=best_params['ff_dim'],
-        num_layers=best_params['num_layers']
+        num_heads= 1, #best_params['num_heads'],
+        ff_hidden_dim= 1024, #best_params['ff_dim'],
+        num_layers= 3 #best_params['num_layers']
     ).to(device)
 
     # Define criterion and optimizer
     criterion = RMSELoss()
-    optimizer = optim.Adam(combined_model.parameters(), lr=best_params['learning_rate'])
+    optimizer = optim.Adam(combined_model.parameters(), lr=10e-8 )#best_params['learning_rate'])
 
 
-    num_epochs = 100
+    num_epochs = 300
     # Training Loop
     train_losses = []
     val_losses = []
@@ -163,7 +163,7 @@ if __name__ == "__main__":
     plt.ylabel("Loss")
     plt.legend()
     plt.title("Training and Validation Losses")
-    plt.savefig("../deep_learning_outputs/figures/STP_v6_loss_best_param_01.png")
+    plt.savefig("../deep_learning_outputs/figures/STP_v6_loss_best_param_05.png")
     
     
 
@@ -178,10 +178,16 @@ if __name__ == "__main__":
     plt.title("True vs Predicted Values")
     plt.plot([min(true_values), max(true_values)], [min(true_values), max(true_values)], 'r--')
     plt.text(0.5, 0.1, f"RMSE: {criterion(torch.tensor(predictions), torch.tensor(true_values)).item():.4f}", ha='center', va='center', transform=plt.gca().transAxes)
-    plt.savefig("../deep_learning_outputs/figures/STP_v6_predict_best_param_01.png")
+    plt.savefig("../deep_learning_outputs/figures/STP_v6_predict_best_param_05.png")
     
-    
+    npz_file = '../deep_learning_outputs/model_evaluation/STP_v6_05.npz'
+
+    np.savez(
+        npz_file,
+        y_pred=predictions,
+        y_test=true_values
+    )
     
     # Save the trained model
-    torch.save(model.state_dict(), "../deep_learning_outputs/trained_models/STP_v6_best_param.pth")
+    torch.save(model.state_dict(), "../deep_learning_outputs/trained_models/STP_v6_best_param_05.pth")
 

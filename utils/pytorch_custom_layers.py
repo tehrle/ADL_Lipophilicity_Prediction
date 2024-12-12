@@ -96,7 +96,7 @@ class TransformerBlock(nn.Module):
     
 class LogPPredictionModel(nn.Module):
     """
-    Combines a base model with transformer blocks and an MLP head for regression tasks.
+    Combines a base model with transformer blocks for regression tasks.
 
     Attributes:
     -----------
@@ -143,18 +143,10 @@ class LogPPredictionModel(nn.Module):
 
         Parameters:
         -----------
-        base_model : torch.nn.Module
-            Pretrained model providing contextual embeddings.
-        embed_size : int
-            Dimensionality of the input embeddings.
-        num_heads : int
-            Number of attention heads in the transformer blocks.
-        ff_hidden_dim : int
-            Dimensionality of the hidden layer in the feed-forward network.
-        num_layers : int
-            Number of transformer blocks to stack.
-        dropout : float
-            Dropout rate to be applied in attention and feed-forward layers.
+        input_ids : torch.Tensor
+            Tensor of token indices with shape (batch_size, seq_len).
+        attention_mask : torch.Tensor
+            Tensor of attention masks with shape (batch_size, seq_len).
         """
         # Forward pass through the base model
         outputs = self.base_model(input_ids=input_ids, attention_mask=attention_mask)
@@ -183,7 +175,41 @@ class LogPPredictionModel(nn.Module):
 
 
 class STP(nn.Module):
+    """
+    Initializes the STP model, which is an Multi-Head Attention without pretrained model.
+
+    Parameters:
+    -----------
+    embedding : torch.nn.Embedding
+        Embedding layer for input tokens.
+    positional_encoding : torch.nn.Parameter
+        Positional encoding added to the embeddings.
+    layers : torch.nn.ModuleList
+        List of transformer blocks.
+    norm : torch.nn.LayerNorm
+        Layer normalization applied to the output of the transformer blocks.
+    max_pool : torch.nn.AdaptiveMaxPool1d
+        Adaptive max pooling layer to reduce sequence length.
+    mlp_head : torch.nn.Sequential
+        MLP head for regression, consisting of two linear layers with a ReLU activation in between.
+    --------
+
+    """
     def __init__(self, vocab_size, embed_size, num_heads, ff_hidden_dim, num_layers, dropout, max_seq_length):
+        """
+        Initializes the STP model.
+        Parameters:
+        -----------
+        vocab_size (int): Size of the vocabulary.
+        embed_size (int): Dimensionality of the embeddings.
+        num_heads (int): Number of attention heads in the transformer.
+        ff_hidden_dim (int): Dimensionality of the feed-forward hidden layer.
+        num_layers (int): Number of transformer layers.
+        dropout (float): Dropout rate.
+        max_seq_length (int): Maximum sequence length for positional encoding.
+        
+        """
+
         super(STP, self).__init__()
         
         # Input Embedding Layer
@@ -206,8 +232,18 @@ class STP(nn.Module):
         )
     
     def forward(self, x):
+        """
+        Performs a forward pass through the STP model.
+        Parameters:
+        -----------
+        x (torch.Tensor): Input tensor of token indices with shape (batch_size, seq_len).
+
+        Returns:
+        --------
+        torch.Tensor: Output tensor with shape (batch_size, 1) for regression.
+        """
         # Input embedding with positional encoding
-        batch_size, seq_length = x.size()
+        _, seq_length = x.size()
         embed = self.embedding(x) + self.positional_encoding[:, :seq_length, :]
 
         # Transformer blocks
@@ -227,50 +263,3 @@ class STP(nn.Module):
         out = self.mlp_head(out)
         return out
     
-
-class STP_Tahn(nn.Module):
-    def __init__(self, vocab_size, embed_size, num_heads, ff_hidden_dim, num_layers, dropout, max_seq_length):
-        super(STP_Tahn, self).__init__()
-        
-        # Input Embedding Layer
-        self.embedding = nn.Embedding(vocab_size, embed_size)
-        self.positional_encoding = nn.Parameter(torch.zeros(1, max_seq_length, embed_size))
-        
-        # Transformer Layers
-        self.layers = nn.ModuleList([
-            TransformerBlock(embed_size, num_heads, ff_hidden_dim, dropout)
-            for _ in range(num_layers)
-        ])
-        
-        # Regression Head
-        self.norm = nn.LayerNorm(embed_size)
-        self.max_pool = nn.AdaptiveMaxPool1d(1)
-        self.mlp_head = nn.Sequential(
-            nn.Linear(embed_size, ff_hidden_dim),
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.Linear(ff_hidden_dim, ff_hidden_dim // 2),
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.Linear(ff_hidden_dim // 2, 1)
-        )
-
-    def forward(self, x):
-        # Input embedding with positional encoding
-        batch_size, seq_length = x.size()
-        embed = self.embedding(x) + self.positional_encoding[:, :seq_length, :]
-
-        # Transformer blocks
-        out = embed.permute(1, 0, 2)  # (seq_len, batch_size, embed_size)
-        for layer in self.layers:
-            out = layer(out)
-        out = out.permute(1, 0, 2)  # (batch_size, seq_len, embed_size)
-
-        # Apply LayerNorm over the embed_size dimension
-        out = self.norm(out)  # Now out has shape (batch_size, seq_len, embed_size)
-
-        # Max pooling over the sequence length
-        out = out.permute(0, 2, 1)  # (batch_size, embed_size, seq_len)
-        out = self.max_pool(out).squeeze(-1)  # Now out has shape (batch_size, embed_size)
-
-        # Regression Head
-        out = self.mlp_head(out)
-        return out

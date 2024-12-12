@@ -71,6 +71,5 @@ from .smiles_processing import (
 from .pytorch_custom_layers import (
     TransformerBlock,
     LogPPredictionModel,
-    STP,
-    STP_Tahn
+    STP
 )

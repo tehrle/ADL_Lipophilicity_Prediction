@@ -126,7 +126,7 @@ logging.info('Starting to train model...')
 optimizer = Adam(model.parameters(), lr=3e-4)
 
 # Number of epochs for training
-num_epochs = 1000
+num_epochs = 150
 
 metrics = train_graph_model(
     model=model,

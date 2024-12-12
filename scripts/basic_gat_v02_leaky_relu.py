@@ -176,7 +176,7 @@ metrics = train_graph_model(
 logging.info(f'Finished: Trained model for {num_epochs} epochs')
 
 # save trained model
-torch.save(model, '../deep_learning_outputs/trained_models/basic_gat_v02.pt')
+torch.save(model, '../deep_learning_outputs/trained_models/basic_gat_v02_leaky_relu.pt')
 
 logging.info('Successfully saved trained model')
 
@@ -187,7 +187,7 @@ plot_history(
     train_label='Train MSE (Loss) / -',
     val_label='Val MSE (Loss) / -',
     figsize=(16, 8),
-    file='../deep_learning_outputs/figures/train_history_basic_gat_v02.png'
+    file='../deep_learning_outputs/figures/train_history_basic_gat_v02_leaky_relu.png'
 )
 
 # save train/val_losses as csv
@@ -195,7 +195,7 @@ training_lod_df = pd.DataFrame(metrics)
 
 # save trainings log
 training_lod_df.to_csv(
-    '../deep_learning_outputs/training_logs/train_history_basic_gat_v02.csv',
+    '../deep_learning_outputs/training_logs/train_history_basic_gat_v02_leaky_relu.csv',
     index=False,
     header=True
 )
@@ -243,7 +243,7 @@ test_metrics_df = pd.DataFrame({
     'test_rmse': [rmse_loss.item()]
 })
 
-test_metrics_csv = '../deep_learning_outputs/model_evaluation/basic_gat_test_evaluation_v02.csv'
+test_metrics_csv = '../deep_learning_outputs/model_evaluation/basic_gat_test_evaluation_v02_leaky_relu.csv'
 
 test_metrics_df.to_csv(
     test_metrics_csv,
@@ -260,7 +260,7 @@ y_test_array = y_test_tensor.flatten().numpy()
 logging.info(f'Shape of y_pred_array: {y_pred_array.shape}')
 logging.info(f'Shape of y_test_array: {y_test_array.shape}')
 
-npz_file = '../deep_learning_outputs/model_evaluation/basic_gat_predicted_values_v02.npz'
+npz_file = '../deep_learning_outputs/model_evaluation/basic_gat_predicted_values_v02_leaky_relu.npz'
 
 np.savez(
     npz_file,
@@ -271,7 +271,7 @@ np.savez(
 logging.info(f'Successfully saved labels/ predicted values of test set as {npz_file}')
 
 # Plot predicted vs. True logP Values
-correlation_file = f'../deep_learning_outputs/model_evaluation/basic_gat_correlation_plot_v02.png'
+correlation_file = f'../deep_learning_outputs/model_evaluation/basic_gat_correlation_plot_v02_leaky_relu.png'
 
 plot_logp_correlation(
     file=correlation_file,

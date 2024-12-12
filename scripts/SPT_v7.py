@@ -2,6 +2,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 from pysmilesutils.tokenize import SMILESAtomTokenizer
 import sys
@@ -10,14 +11,6 @@ import logging
 import time as t
 import optuna
 import numpy as np
-
-
-def collate_fn(batch):
-    smiles, targets = zip(*batch)
-    smiles = [torch.tensor(s, dtype=torch.long) for s in smiles]  # Convert each SMILES sequence to a tensor
-    targets = torch.tensor(targets, dtype=torch.float)
-    return smiles, targets
-
 
 # settings for hpc:
 # change wd to current folder to match relative paths
@@ -33,21 +26,31 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-from utils import (split_dataset,split_SMILE_Dataset, SMILESDataset, 
-                    TransformerBlock, train_STP_model, evaluate_STP_model,
-                    RMSELoss,SMILESAugmentation, STP, STP_Tahn)
+from utils import (split_SMILE_Dataset, SMILESDataset, train_STP_model, 
+                   evaluate_STP_model, RMSELoss,SMILESAugmentation, STP)
 
 
 
-'''
 def objective(trial, train_dataset, val_dataset, device):
+    """
+    Objective function for hyperparameter tuning using Optuna.
+    This function suggests hyperparameters, trains a model, evaluates it, and reports the validation loss to Optuna.
+    It also handles pruning of unpromising trials.
+    Args:
+        trial (optuna.trial.Trial): A trial object that provides interfaces to suggest hyperparameters.
+        train_dataset (torch.utils.data.Dataset): The training dataset.
+        val_dataset (torch.utils.data.Dataset): The validation dataset.
+        device (torch.device): The device to run the model on (e.g., 'cpu' or 'cuda').
+    Returns:
+        float: The final validation loss to be minimized.
+    """
     # Suggest hyperparameters
     embed_dim = trial.suggest_categorical('embed_dim', [64, 128, 256])
     dropout = trial.suggest_float('dropout', 0.1, 0.5)
-    num_heads = trial.suggest_categorical('num_heads', [2, 4, 8])
+    num_heads = trial.suggest_categorical('num_heads', [1, 2, 4, 8])
     num_layers = trial.suggest_int('num_layers', 1, 6)
-    ff_dim = trial.suggest_categorical('ff_dim', [256, 512, 1024])
-    learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1e-3)
+    ff_dim = trial.suggest_categorical('ff_dim', [256, 512, 1024, 2048])
+    learning_rate = trial.suggest_float('learning_rate', 1e-8, 1e-6)
     batch_size = trial.suggest_categorical('batch_size', [32, 64, 128])
     # Fixed parameters (you can also tune these if needed)
     num_epochs = 30  # Use fewer epochs for faster tuning
@@ -91,7 +94,7 @@ def objective(trial, train_dataset, val_dataset, device):
 
     # Return the final validation loss to be minimized
     return val_loss
-'''
+
 
 # Training and Evaluation
 
@@ -117,9 +120,9 @@ if __name__ == "__main__":
     
 
     # Traindata augmentation
-    augmentation = SMILESAugmentation(train_dataset, tokenizer)
-    smiles, targets = augmentation.augment(num_samples=2)
-    train_dataset = SMILESDataset(smiles, targets, tokenizer, max_length=max_len)
+    # augmentation = SMILESAugmentation(train_dataset, tokenizer)
+    # smiles, targets = augmentation.augment(num_samples=2)
+    # train_dataset = SMILESDataset(smiles, targets, tokenizer, max_length=max_len)
 
 
     # logging shape infos
@@ -128,10 +131,7 @@ if __name__ == "__main__":
     logging.info(f'Test data shape: {len(test_dataset)}')
 
     
-    # train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    # val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-    
-    # Model, Optimizer, Loss
+    # Device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
 
@@ -157,14 +157,14 @@ if __name__ == "__main__":
     # # Prepare data loaders with the best batch size
     # batch_size = best_params['batch_size']
     batch_size = 64
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 
     num_epochs = 50
 
-    model = STP_Tahn(vocab_size = len(tokenizer),
+    model = STP(vocab_size = len(tokenizer),
                 embed_size = 256, #best_params['embed_dim'], 
                 num_heads = 4, #best_params['num_heads'], 
                 ff_hidden_dim = 2048, #best_params['ff_dim'], 
@@ -174,7 +174,6 @@ if __name__ == "__main__":
                 ).to(device)
     
     optimizer = optim.Adam(model.parameters(), lr= 1e-07)#best_params['learning_rate'])
-    #loss_fn = nn.MSELoss()
     loss_fn = RMSELoss()
     
     # Training Loop
@@ -216,7 +215,7 @@ if __name__ == "__main__":
     plt.savefig("../deep_learning_outputs/figures/STP_v7_predict_best_param_06.png")
 
     
-
+    # Save the predictions and true values
     npz_file = '../deep_learning_outputs/model_evaluation/STP_v7_06.npz'
 
     np.savez(

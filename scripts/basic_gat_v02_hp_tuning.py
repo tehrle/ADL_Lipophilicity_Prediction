@@ -145,15 +145,6 @@ class SimpleGAT(nn.Module):
         x = self.linear3(x)
 
         return x
-
-model = SimpleGAT(
-    in_channels=9,
-    hidden_channels=128,
-    out_channels=1,
-    edge_dim=3,
-    num_heads=4,
-    negative_slope=0.01
-)
 #=======================================================================================================================
 
 #

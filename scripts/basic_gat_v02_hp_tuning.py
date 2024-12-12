@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import Linear
-from torch_geometric.nn import GATConv, global_add_pool, summary
+from torch_geometric.nn import GATConv, global_add_pool
 from torch_geometric.loader import DataLoader
 from torch.optim import Adam
 from sklearn.preprocessing import MinMaxScaler

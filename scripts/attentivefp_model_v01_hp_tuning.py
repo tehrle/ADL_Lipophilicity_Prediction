@@ -10,8 +10,6 @@ import os
 import sys
 import logging
 
-from scripts.attentivefp_model_v01 import batch_size
-
 # logging settings
 logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',

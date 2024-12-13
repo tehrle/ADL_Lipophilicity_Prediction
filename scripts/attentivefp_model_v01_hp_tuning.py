@@ -142,7 +142,7 @@ def objective(trial):
 logging.info('Starting to tune dropout rate...')
 
 # Create Optuna Study
-n_trials = 50
+n_trials = 300
 study = optuna.create_study(study_name='attentiveFP_hp_tuning_v01', direction='minimize')
 study.optimize(objective, n_trials=n_trials)
 

@@ -87,7 +87,7 @@ def objective(trial):
     num_layers = trial.suggest_int('num_layers', 2, 6)
     num_timesteps = trial.suggest_int('num_timesteps', 2, 6)
     learning_rate = trial.suggest_float('learning_rate', 1e-4, 1e-2, log=True)
-    batch_size = trial.suggest_int('batch_size', 32, 256)
+    batch_size = trial.suggest_categorical('batch_size', [16, 32, 64, 128, 256])
 
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=True)
@@ -142,7 +142,7 @@ def objective(trial):
 logging.info('Starting to tune dropout rate...')
 
 # Create Optuna Study
-n_trials = 300
+n_trials = 200
 study = optuna.create_study(study_name='attentiveFP_hp_tuning_v01', direction='minimize')
 study.optimize(objective, n_trials=n_trials)
 
